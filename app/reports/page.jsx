@@ -1,180 +1,252 @@
 "use client";
-import React, { useEffect, useState } from "react";
-
-import { collection, getDocs } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/Config";
 import {
-  FaMapMarkerAlt,
-  FaCheckCircle,
+  FaSearch,
   FaClock,
-  FaExclamationTriangle,
-  FaSyringe, // Drug Abuse
-  FaCapsules, // Drug Trafficking
-  FaGavel, // Illegal Possession (Court Gavel)
+  FaMapMarkerAlt,
+  FaTag,
+  FaEye,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaHourglassHalf,
+  FaFilter,
+  FaCalendarAlt,
 } from "react-icons/fa";
 
-// Report types and their corresponding icons
-const reportTypes = {
-  "drug trafficking": {
-    label: "Drug Trafficking",
-    icon: <FaCapsules className="text-blue-500" />,
-  },
-  "drug abuse": {
-    label: "Drug Abuse",
-    icon: <FaSyringe className="text-red-500" />,
-  },
-  "illegal possession": {
-    label: "Illegal Possession",
-    icon: <FaGavel className="text-gray-700" />,
-  },
-};
-
-const ReportsPage = () => {
+export default function Reports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "reports"));
-        const reportsData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setReports(reportsData);
-      } catch (error) {
-        console.error("Error fetching reports:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const reportsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setReports(reportsData);
+      setLoading(false);
+    });
 
-    fetchReports();
+    return () => unsubscribe();
   }, []);
 
-  // Filtered reports based on selected filters
-  const filteredReports = reports.filter((report) => {
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "investigating":
+        return "bg-blue-100 text-blue-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "dismissed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "pending":
+        return <FaHourglassHalf className="mr-1" />;
+      case "investigating":
+        return <FaEye className="mr-1" />;
+      case "resolved":
+        return <FaCheckCircle className="mr-1" />;
+      case "dismissed":
+        return <FaTimesCircle className="mr-1" />;
+      default:
+        return null;
+    }
+  };
+
+  const filteredReports = reports
+    .filter((report) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        report.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        report.location?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        filterStatus === "all" || report.status === filterStatus;
+
+      const matchesType =
+        filterType === "all" || report.reportType === filterType;
+
+      return matchesSearch && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "newest") {
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      }
+      return new Date(a.timestamp) - new Date(b.timestamp);
+    });
+
+  if (loading) {
     return (
-      (statusFilter ? report.status === statusFilter : true) &&
-      (typeFilter ? report.reportType === typeFilter : true)
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
     );
-  });
+  }
 
   return (
-    <div className="relative min-h-screen w-full">
-      {/* Full-Screen Background Image with Overlay */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1470790376778-a9fbc86d70e2?q=80&w=1408&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')",
-        }}
-      >
-        <div className="absolute inset-0 bg-black/50"></div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="mb-4 md:mb-0">
+              <h1 className="text-2xl font-bold text-gray-900">Reports Dashboard</h1>
+              <p className="text-gray-600">Manage and track submitted reports</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">Total Reports:</span>
+              <span className="text-lg font-semibold text-blue-600">{reports.length}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Content Wrapper */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4">
-        <h1 className="text-4xl font-extrabold text-center text-white mb-8">
-          Reported Incidents
-        </h1>
+      {/* Filters and Search */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search reports..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          {/* Status Filter */}
-          <select
-            className="p-2 rounded bg-white shadow-md"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="active">Active</option>
-            <option value="resolved">Resolved</option>
-          </select>
+            {/* Status Filter */}
+            <div className="relative">
+              <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <select
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="investigating">Investigating</option>
+                <option value="resolved">Resolved</option>
+                <option value="dismissed">Dismissed</option>
+              </select>
+            </div>
 
-          {/* Report Type Filter */}
-          <select
-            className="p-2 rounded bg-white shadow-md"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="">All Report Types</option>
-            {Object.keys(reportTypes).map((key) => (
-              <option key={key} value={key}>
-                {reportTypes[key].label}
-              </option>
-            ))}
-          </select>
+            {/* Type Filter */}
+            <div className="relative">
+              <FaTag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <select
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
+                <option value="all">All Types</option>
+                <option value="drug trafficking">Drug Trafficking</option>
+                <option value="illegal possession">Illegal Possession</option>
+                <option value="suspicious activity">Suspicious Activity</option>
+                <option value="drug manufacturing">Drug Manufacturing</option>
+                <option value="distribution">Distribution</option>
+              </select>
+            </div>
+
+            {/* Sort Order */}
+            <div className="relative">
+              <FaClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <select
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {loading ? (
-          <p className="text-center text-gray-200">Loading reports...</p>
-        ) : filteredReports.length === 0 ? (
-          <p className="text-center text-gray-200">No reports found.</p>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {filteredReports.map((report) => (
-              <div
-                key={report.id}
-                className="bg-white w-[300px] rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300"
-              >
-                {report.evidence && (
-                  <img
-                    src={report.evidence.url}
-                    alt="Evidence"
-                    className="w-full h-48 object-cover"
-                  />
-                )}
-                <div className="p-5">
-                  <h2 className="text-xl font-semibold flex items-center text-gray-800">
-                    {reportTypes[report.reportType]?.icon || (
-                      <FaExclamationTriangle className="text-yellow-500" />
-                    )}
-                    <span className="ml-2">
-                      {reportTypes[report.reportType]?.label ||
-                        "Unknown Report"}
-                    </span>
-                  </h2>
+        {/* Reports Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredReports.map((report) => (
+            <div
+              key={report.id}
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      report.status
+                    )}`}
+                  >
+                    {getStatusIcon(report.status)}
+                    {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                  </span>
+                  <span className="text-sm text-gray-500 flex items-center">
+                    <FaCalendarAlt className="mr-1" />
+                    {new Date(report.timestamp).toLocaleDateString()}
+                  </span>
+                </div>
 
-                  <div className="flex items-center text-gray-500 mt-3 text-sm">
-                    <FaMapMarkerAlt className="mr-2 text-blue-500" />
-                    <span>{report.location}</span>
-                  </div>
-                  <div className="mt-4 flex items-center text-gray-500 text-sm">
-                    <FaClock className="mr-2 text-gray-500" />
-                    <span>{report.timestamp.split("T")[0]}</span>
-                  </div>
-                  <div className="mt-4">
-                    <span
-                      className={`px-4 py-1 rounded-full text-sm font-semibold uppercase tracking-wide ${
-                        report.status === "resolved"
-                          ? "bg-green-500 text-white" // Resolved (Green)
-                          : report.status === "active"
-                          ? "bg-blue-500 text-white" // Active (Blue)
-                          : "bg-yellow-500 text-gray-900" // Pending (Yellow)
-                      }`}
-                    >
-                      {report.status === "resolved" ? (
-                        <FaCheckCircle className="inline-block mr-1" />
-                      ) : report.status === "active" ? (
-                        <span className="inline-block w-2 h-2 bg-white rounded-full mr-1"></span>
-                      ) : (
-                        <FaClock className="inline-block mr-1" />
-                      )}
-                      {report.status}
-                    </span>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {report.reportType.charAt(0).toUpperCase() + report.reportType.slice(1)}
+                </h3>
+
+                <p className="text-gray-600 mb-4 line-clamp-3">{report.description}</p>
+
+                <div className="flex items-start space-x-4">
+                  <div className="flex items-center text-sm text-gray-500">
+                    <FaMapMarkerAlt className="mr-1" />
+                    <span className="line-clamp-1">{report.location}</span>
                   </div>
                 </div>
+
+                {report.evidence && (
+                  <div className="mt-4">
+                    <img
+                      src={report.evidence.url}
+                      alt="Evidence"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
               </div>
-            ))}
+
+              <div className="px-6 py-4 bg-gray-50 rounded-b-lg border-t">
+                <button className="w-full text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
+                  View Full Report →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredReports.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <FaSearch className="inline-block text-4xl" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Reports Found</h3>
+            <p className="text-gray-600">
+              Try adjusting your search or filter criteria
+            </p>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default ReportsPage;
+}

@@ -1,7 +1,22 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/Config";
+import {
+  FaChartLine,
+  FaMapMarkerAlt,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaHourglassHalf,
+  FaChartBar,
+  FaCalendarAlt,
+  FaUserShield,
+  FaBell,
+  FaSearch,
+  FaDownload,
+  FaEye,
+  FaTimesCircle,
+} from "react-icons/fa";
 import {
   LineChart,
   Line,
@@ -9,260 +24,303 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
 } from "recharts";
 
-const Dashboard = () => {
-  const [stats, setStats] = useState({
-    pending: 0,
-    active: 0,
-    resolved: 0,
-  });
-
-  const [chartData, setChartData] = useState([]);
-  const [filteredStatus, setFilteredStatus] = useState("all"); // Default to show all statuses
-  const [timeRange, setTimeRange] = useState("1month"); // Default time range
-
-  const fetchStats = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "reports"));
-      const data = querySnapshot.docs.map((doc) => doc.data());
-
-      console.log(data);
-
-      // Calculate counts
-      const counts = {
-        pending: data.filter((item) => item.status === "pending").length,
-        active: data.filter((item) => item.status === "active").length,
-        resolved: data.filter((item) => item.status === "resolved").length,
-      };
-
-      setStats(counts);
-
-      // Prepare data for the chart
-      const filteredData = filterDataByRange(data);
-      const groupedData = groupData(filteredData);
-      setChartData(groupedData);
-    } catch (error) {
-      console.error("Error fetching stats: ", error);
-    }
-  };
-
-  const isValidTimestamp = (timestamp) => {
-    return !isNaN(new Date(timestamp).getTime());
-  };
-
-  const filterDataByRange = (data) => {
-    const now = new Date();
-    let filteredData = [];
-
-    if (timeRange === "1week") {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(now.getDate() - 7);
-      filteredData = data.filter(
-        (item) =>
-          isValidTimestamp(item.timestamp) &&
-          new Date(item.timestamp) >= oneWeekAgo
-      );
-    } else if (timeRange === "1month") {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(now.getMonth() - 1);
-      filteredData = data.filter(
-        (item) =>
-          isValidTimestamp(item.timestamp) &&
-          new Date(item.timestamp) >= oneMonthAgo
-      );
-    } else if (timeRange === "1year") {
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(now.getFullYear() - 1);
-      filteredData = data.filter(
-        (item) =>
-          isValidTimestamp(item.timestamp) &&
-          new Date(item.timestamp) >= oneYearAgo
-      );
-    }
-
-    return filteredData;
-  };
-
-  const groupData = (data) => {
-    const grouped = {};
-
-    data.forEach((item) => {
-      if (!item.timestamp || !isValidTimestamp(item.timestamp)) return;
-
-      let key;
-      if (timeRange === "1year") {
-        // Group by month
-        const date = new Date(item.timestamp);
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}`;
-      } else {
-        // Group by day
-        key = new Date(item.timestamp).toISOString().split("T")[0];
-      }
-
-      if (!grouped[key]) {
-        grouped[key] = { date: key, pending: 0, active: 0, resolved: 0 };
-      }
-
-      grouped[key][item.status]++;
-    });
-
-    return Object.values(grouped).sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
-    );
-  };
+export default function Dashboard() {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [timeframe, setTimeframe] = useState("week");
+  const [selectedRegion, setSelectedRegion] = useState("all");
 
   useEffect(() => {
-    fetchStats();
-  }, [timeRange]);
+    const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const reportsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setReports(reportsData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const getStatusStats = () => {
+    const stats = {
+      pending: 0,
+      investigating: 0,
+      resolved: 0,
+      dismissed: 0,
+    };
+    reports.forEach((report) => {
+      stats[report.status] = (stats[report.status] || 0) + 1;
+    });
+    return stats;
+  };
+
+  const getReportTypeStats = () => {
+    const stats = {};
+    reports.forEach((report) => {
+      stats[report.reportType] = (stats[report.reportType] || 0) + 1;
+    });
+    return stats;
+  };
+
+  const getTimeSeriesData = () => {
+    const timeData = [];
+    const days = timeframe === "week" ? 7 : timeframe === "month" ? 30 : 90;
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const count = reports.filter(
+        (report) =>
+          new Date(report.timestamp).toDateString() === date.toDateString()
+      ).length;
+      timeData.push({
+        date: date.toLocaleDateString(),
+        reports: count,
+      });
+    }
+    return timeData;
+  };
+
+  const COLORS = ["#4F46E5", "#7C3AED", "#EC4899", "#F59E0B"];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const stats = getStatusStats();
+  const typeStats = getReportTypeStats();
+  const timeSeriesData = getTimeSeriesData();
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-8 text-center">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p>Track the status of all reports submitted to the system.</p>
-      </header>
-
-      <main className="container mx-auto p-8">
-        {/* Filters */}
-        <div className="mb-8 flex flex-col sm:flex-row justify-between items-center">
-          <div>
-            <label className="mr-4 font-semibold">Filter by Status:</label>
-            <select
-              value={filteredStatus}
-              onChange={(e) => setFilteredStatus(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            >
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="active">active</option>
-              <option value="resolved">resolved</option>
-            </select>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <label className="mr-4 font-semibold">Filter by Time Range:</label>
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            >
-              <option value="1week">1 Week</option>
-              <option value="1month">1 Month</option>
-              <option value="1year">1 Year</option>
-            </select>
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Navigation Bar */}
+      <nav className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button className="p-2 text-gray-400 hover:text-gray-500">
+                <FaBell className="h-6 w-6" />
+              </button>
+              <button className="flex items-center space-x-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                <FaDownload className="h-4 w-4" />
+                <span>Export Data</span>
+              </button>
+            </div>
           </div>
         </div>
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-          {/* Pending Requests */}
-          <div className="bg-white shadow-lg rounded-lg p-6 text-center border-t-4 border-yellow-400">
-            <h2 className="text-lg font-bold text-gray-800">Pending</h2>
-            <p className="text-3xl font-extrabold text-yellow-500 mt-4">
-              {stats.pending}
-            </p>
-            <p className="text-gray-600 mt-2">Requests yet to be processed</p>
-          </div>
+      </nav>
 
-          {/* active Requests */}
-          <div className="bg-white shadow-lg rounded-lg p-6 text-center border-t-4 border-green-400">
-            <h2 className="text-lg font-bold text-gray-800">active</h2>
-            <p className="text-3xl font-extrabold text-green-500 mt-4">
-              {stats.active}
-            </p>
-            <p className="text-gray-600 mt-2">Requests successfully reactive</p>
-          </div>
-
-          {/* resolved Requests */}
-          <div className="bg-white shadow-lg rounded-lg p-6 text-center border-t-4 border-blue-400">
-            <h2 className="text-lg font-bold text-gray-800">resolved</h2>
-            <p className="text-3xl font-extrabold text-blue-500 mt-4">
-              {stats.resolved}
-            </p>
-            <p className="text-gray-600 mt-2">
-              Requests currently under review
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {[
+            {
+              title: "Total Reports",
+              value: reports.length,
+              icon: FaChartBar,
+              color: "blue",
+            },
+            {
+              title: "Pending Review",
+              value: stats.pending,
+              icon: FaHourglassHalf,
+              color: "yellow",
+            },
+            {
+              title: "Under Investigation",
+              value: stats.investigating,
+              icon: FaEye,
+              color: "purple",
+            },
+            {
+              title: "Resolved Cases",
+              value: stats.resolved,
+              icon: FaCheckCircle,
+              color: "green",
+            },
+          ].map((stat, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">
+                    {stat.value}
+                  </p>
+                </div>
+                <div className={`text-${stat.color}-500 bg-${stat.color}-50 p-3 rounded-lg`}>
+                  <stat.icon className="h-6 w-6" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Pie Chart */}
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
-            Status Distribution
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={[
-                  { name: "Pending", value: stats.pending },
-                  { name: "active", value: stats.active },
-                  { name: "resolved", value: stats.resolved },
-                ]}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                fill="#8884d8"
-                label={(entry) => `${entry.name}: ${entry.value}`}
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Time Series Chart */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Report Trends</h2>
+              <select
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
               >
-                <Cell fill="#F59E0B" />
-                <Cell fill="#10B981" />
-                <Cell fill="#3B82F6" />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+                <option value="quarter">Last 90 Days</option>
+              </select>
+            </div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={timeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="reports"
+                    stroke="#4F46E5"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Distribution Chart */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Report Distribution</h2>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={Object.entries(typeStats).map(([name, value]) => ({
+                      name,
+                      value,
+                    }))}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {Object.entries(typeStats).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {Object.entries(typeStats).map(([type, count], index) => (
+                <div key={type} className="flex items-center space-x-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-sm text-gray-600">
+                    {type.charAt(0).toUpperCase() + type.slice(1)}: {count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Line Chart */}
-        <div className="bg-white shadow-lg rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
-            Reports Over Time
-          </h2>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {filteredStatus === "all" || filteredStatus === "pending" ? (
-                <Line
-                  type="monotone"
-                  dataKey="pending"
-                  stroke="#F59E0B"
-                  name="Pending"
+        {/* Recent Reports Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Recent Reports</h2>
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search reports..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-              ) : null}
-              {filteredStatus === "all" || filteredStatus === "active" ? (
-                <Line
-                  type="monotone"
-                  dataKey="active"
-                  stroke="#10B981"
-                  name="active"
-                />
-              ) : null}
-              {filteredStatus === "all" || filteredStatus === "resolved" ? (
-                <Line
-                  type="monotone"
-                  dataKey="resolved"
-                  stroke="#3B82F6"
-                  name="resolved"
-                />
-              ) : null}
-            </LineChart>
-          </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ID
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {reports.slice(0, 5).map((report) => (
+                    <tr key={report.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        #{report.id.slice(0, 8)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {report.reportType}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {report.location}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            report.status === "resolved"
+                              ? "bg-green-100 text-green-800"
+                              : report.status === "investigating"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {report.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(report.timestamp).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
-};
-
-export default Dashboard;
+}
