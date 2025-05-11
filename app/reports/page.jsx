@@ -104,12 +104,18 @@ export default function Reports() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div className="mb-4 md:mb-0">
-              <h1 className="text-2xl font-bold text-gray-900">Reports Dashboard</h1>
-              <p className="text-gray-600">Manage and track submitted reports</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Reports Dashboard
+              </h1>
+              <p className="text-gray-600">
+                Manage and track submitted reports
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">Total Reports:</span>
-              <span className="text-lg font-semibold text-blue-600">{reports.length}</span>
+              <span className="text-lg font-semibold text-blue-600">
+                {reports.length}
+              </span>
             </div>
           </div>
         </div>
@@ -132,8 +138,8 @@ export default function Reports() {
             </div>
 
             {/* Status Filter */}
-            <div className="relative">
-              <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <div className="flex items-center justify-between">
+              {/* <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
               <select
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filterStatus}
@@ -149,7 +155,7 @@ export default function Reports() {
 
             {/* Type Filter */}
             <div className="relative">
-              <FaTag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              {/* <FaTag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
               <select
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filterType}
@@ -166,7 +172,7 @@ export default function Reports() {
 
             {/* Sort Order */}
             <div className="relative">
-              <FaClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              {/* <FaClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
               <select
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={sortOrder}
@@ -194,7 +200,8 @@ export default function Reports() {
                     )}`}
                   >
                     {getStatusIcon(report.status)}
-                    {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                    {report.status.charAt(0).toUpperCase() +
+                      report.status.slice(1)}
                   </span>
                   <span className="text-sm text-gray-500 flex items-center">
                     <FaCalendarAlt className="mr-1" />
@@ -203,10 +210,13 @@ export default function Reports() {
                 </div>
 
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {report.reportType.charAt(0).toUpperCase() + report.reportType.slice(1)}
+                  {report.reportType.charAt(0).toUpperCase() +
+                    report.reportType.slice(1)}
                 </h3>
 
-                <p className="text-gray-600 mb-4 line-clamp-3">{report.description}</p>
+                <p className="text-gray-600 mb-4 line-clamp-3">
+                  {report.description}
+                </p>
 
                 <div className="flex items-start space-x-4">
                   <div className="flex items-center text-sm text-gray-500">
@@ -218,18 +228,12 @@ export default function Reports() {
                 {report.evidence && (
                   <div className="mt-4">
                     <img
-                      src={report.evidence.url}
+                      src={report.evidence}
                       alt="Evidence"
                       className="w-full h-48 object-cover rounded-lg"
                     />
                   </div>
                 )}
-              </div>
-
-              <div className="px-6 py-4 bg-gray-50 rounded-b-lg border-t">
-                <button className="w-full text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors duration-200">
-                  View Full Report →
-                </button>
               </div>
             </div>
           ))}
@@ -240,7 +244,9 @@ export default function Reports() {
             <div className="text-gray-400 mb-4">
               <FaSearch className="inline-block text-4xl" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Reports Found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Reports Found
+            </h3>
             <p className="text-gray-600">
               Try adjusting your search or filter criteria
             </p>

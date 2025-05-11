@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 // Ensure correct Firebase import
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/Config";
+import Link from "next/link";
 
 const statusCycle = ["Pending", "Active", "Complete"];
 
@@ -62,6 +63,28 @@ const AdminReports = () => {
       <h1 className="text-3xl font-bold text-center mb-6">
         Admin Reports Panel
       </h1>
+      <nav className="mb-4">
+        <ul className="flex justify-center space-x-4">
+          <li>
+            <Link
+              href="/admin"
+              className="text-blue-500 hover:text-blue-700 font-semibold"
+            >
+              {" "}
+              Dashboard
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/dashboard"
+              className="text-blue-500 hover:text-blue-700 font-semibold"
+            >
+              {" "}
+              Reports
+            </Link>
+          </li>
+        </ul>
+      </nav>
       {loading ? (
         <p className="text-center">Loading reports...</p>
       ) : (
