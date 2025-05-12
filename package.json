@@ -18,7 +18,8 @@
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
     "react-toastify": "^11.0.5",
-    "recharts": "^2.14.1"
+    "recharts": "^2.14.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "eslint": "^8",

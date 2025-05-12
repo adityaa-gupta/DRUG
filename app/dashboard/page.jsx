@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/Config";
+import * as XLSX from "xlsx";
 import {
   FaChartLine,
   FaMapMarkerAlt,
@@ -99,6 +100,31 @@ export default function Dashboard() {
 
   const COLORS = ["#4F46E5", "#7C3AED", "#EC4899", "#F59E0B"];
 
+  // Function to handle exporting data to Excel
+  const handleExportData = () => {
+    // Prepare data for export - format the reports for Excel
+    const exportData = reports.map((report) => ({
+      ID: report.id,
+      Type: report.reportType,
+      Location: report.location,
+      Status: report.status,
+      Date: new Date(report.timestamp).toLocaleDateString(),
+      Description: report.description || "",
+      // Add any other relevant fields from your report data
+    }));
+
+    // Create worksheet from the data
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Create workbook and add the worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Reports");
+
+    // Generate Excel file and trigger download
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `reports_export_${today}.xlsx`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -126,7 +152,10 @@ export default function Dashboard() {
               <button className="p-2 text-gray-400 hover:text-gray-500">
                 <FaBell className="h-6 w-6" />
               </button>
-              <button className="flex items-center space-x-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+              <button
+                className="flex items-center space-x-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                onClick={handleExportData}
+              >
                 <FaDownload className="h-4 w-4" />
                 <span>Export Data</span>
               </button>

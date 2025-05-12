@@ -78,7 +78,8 @@ export default function Reports() {
       const matchesSearch =
         searchTerm === "" ||
         report.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.location?.toLowerCase().includes(searchTerm.toLowerCase());
+        report.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        report.id.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus =
         filterStatus === "all" || report.status === filterStatus;
@@ -132,13 +133,13 @@ export default function Reports() {
       {/* Filters and Search */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 items-center gap-4">
             {/* Search */}
             <div className="relative">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search reports..."
+                placeholder="Search by ID, description, or location..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

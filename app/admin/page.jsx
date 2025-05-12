@@ -16,6 +16,7 @@ import {
   FiSettings,
   FiLogOut,
   FiPieChart,
+  FiX,
 } from "react-icons/fi";
 import {
   FaSearch,
@@ -71,6 +72,10 @@ const AdminReports = () => {
     complete: 0,
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Add new state for modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [statusChangeReason, setStatusChangeReason] = useState("");
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -109,8 +114,24 @@ const AdminReports = () => {
     fetchReports();
   }, []);
 
-  const updateStatus = async (reportId, currentStatus) => {
+  const openStatusModal = (report) => {
+    setSelectedReport(report);
+    setStatusChangeReason("");
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedReport(null);
+    setStatusChangeReason("");
+  };
+
+  const handleStatusChange = async () => {
+    if (!selectedReport || !statusChangeReason.trim()) return;
+
     try {
+      const reportId = selectedReport.id;
+      const currentStatus = selectedReport.status;
       const nextStatusIndex =
         (statusCycle.indexOf(currentStatus) + 1) % statusCycle.length;
       const nextStatus = statusCycle[nextStatusIndex];
@@ -118,7 +139,8 @@ const AdminReports = () => {
 
       await updateDoc(reportRef, {
         status: nextStatus,
-        statusDescription: `Updated to ${nextStatus} by Admin`,
+        statusDescription: statusChangeReason,
+        lastUpdated: new Date().toISOString(),
       });
 
       // Update reports state
@@ -127,7 +149,8 @@ const AdminReports = () => {
           ? {
               ...report,
               status: nextStatus,
-              statusDescription: `Updated to ${nextStatus} by Admin`,
+              statusDescription: statusChangeReason,
+              lastUpdated: new Date().toISOString(),
             }
           : report
       );
@@ -149,8 +172,11 @@ const AdminReports = () => {
         active,
         complete,
       });
+
+      closeModal();
     } catch (error) {
       console.error("Error updating report status:", error);
+      closeModal();
     }
   };
 
@@ -557,12 +583,17 @@ const AdminReports = () => {
                         </td>
                         <td className="px-6 py-4">
                           <button
-                            onClick={() =>
-                              updateStatus(report.id, report.status)
-                            }
-                            className="px-4 py-2 text-sm text-white rounded-lg shadow-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 focus:ring-2 focus:ring-blue-300 focus:outline-none transform hover:-translate-y-0.5"
+                            onClick={() => openStatusModal(report)}
+                            disabled={report.status === "Complete"}
+                            className={`px-4 py-2 text-sm text-white rounded-lg shadow-sm transition-all duration-200 focus:outline-none transform hover:-translate-y-0.5 ${
+                              report.status === "Complete"
+                                ? "bg-gray-300 cursor-not-allowed opacity-60"
+                                : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:ring-2 focus:ring-blue-300"
+                            }`}
                           >
-                            Update Status
+                            {report.status === "Complete"
+                              ? "Completed"
+                              : "Update Status"}
                           </button>
                         </td>
                       </tr>
@@ -573,6 +604,99 @@ const AdminReports = () => {
             )}
           </div>
         </main>
+
+        {/* Status Update Modal */}
+        {isModalOpen && selectedReport && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div
+                className="fixed inset-0 transition-opacity"
+                aria-hidden="true"
+              >
+                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+              </div>
+              <span
+                className="hidden sm:inline-block sm:align-middle sm:h-screen"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
+              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <FiAlertCircle className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-2">
+                        Update Report Status
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500 mb-4">
+                          Update from{" "}
+                          <span className="font-medium">
+                            {selectedReport.status}
+                          </span>{" "}
+                          to{" "}
+                          <span className="font-medium">
+                            {
+                              statusCycle[
+                                (statusCycle.indexOf(selectedReport.status) +
+                                  1) %
+                                  statusCycle.length
+                              ]
+                            }
+                          </span>
+                        </p>
+                        <div>
+                          <label
+                            htmlFor="reason"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Reason for update{" "}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            id="reason"
+                            name="reason"
+                            rows="3"
+                            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                            placeholder="Enter the reason for this status change..."
+                            value={statusChangeReason}
+                            onChange={(e) =>
+                              setStatusChangeReason(e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                      !statusChangeReason.trim()
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                    onClick={handleStatusChange}
+                    disabled={!statusChangeReason.trim()}
+                  >
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={closeModal}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="bg-white border-t border-gray-100 py-4 px-6">
