@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/Config";
+import Link from "next/link";
 import {
   FaSearch,
   FaClock,
@@ -13,6 +14,11 @@ import {
   FaHourglassHalf,
   FaFilter,
   FaCalendarAlt,
+  FaHome,
+  FaChevronRight,
+  FaUserShield,
+  FaChartBar,
+  FaClipboardList,
 } from "react-icons/fa";
 
 export default function Reports() {
@@ -120,6 +126,8 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {/* Breadcrumb Navigation */}
 
       {/* Filters and Search */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -16,7 +16,13 @@ import {
   FaDownload,
   FaEye,
   FaTimesCircle,
+  FaHome,
+  FaChevronRight,
+  // FaUserShield,
+  // FaChartBar,
+  FaClipboardList,
 } from "react-icons/fa";
+
 import {
   LineChart,
   Line,
@@ -29,6 +35,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import Link from "next/link";
 
 export default function Dashboard() {
   const [reports, setReports] = useState([]);
@@ -74,7 +81,7 @@ export default function Dashboard() {
   const getTimeSeriesData = () => {
     const timeData = [];
     const days = timeframe === "week" ? 7 : timeframe === "month" ? 30 : 90;
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -111,7 +118,9 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Analytics Dashboard
+              </h1>
             </div>
             <div className="flex items-center space-x-4">
               <button className="p-2 text-gray-400 hover:text-gray-500">
@@ -121,6 +130,59 @@ export default function Dashboard() {
                 <FaDownload className="h-4 w-4" />
                 <span>Export Data</span>
               </button>
+            </div>
+          </div>
+          <div className="bg-gray-100 border-b">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <nav className="flex" aria-label="Breadcrumb">
+                <ol className="flex items-center space-x-2 text-sm">
+                  <li>
+                    <Link
+                      href="/"
+                      className="text-gray-500 hover:text-blue-600 flex items-center"
+                    >
+                      <FaHome className="mr-1" />
+                      <span>Home</span>
+                    </Link>
+                  </li>
+                  <li className="flex items-center">
+                    <FaChevronRight
+                      className="text-gray-400 mx-1"
+                      aria-hidden="true"
+                    />
+                    <Link
+                      href="/admin"
+                      className="text-gray-500 hover:text-blue-600 flex items-center"
+                    >
+                      <FaUserShield className="mr-1" />
+                      <span>Admin</span>
+                    </Link>
+                  </li>
+                  <li className="flex items-center">
+                    <FaChevronRight
+                      className="text-gray-400 mx-1"
+                      aria-hidden="true"
+                    />
+                    <Link
+                      href="/dashboard"
+                      className="text-gray-500 hover:text-blue-600 flex items-center"
+                    >
+                      <FaChartBar className="mr-1" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </li>
+                  <li className="flex items-center">
+                    <FaChevronRight
+                      className="text-gray-400 mx-1"
+                      aria-hidden="true"
+                    />
+                    <span className="text-blue-600 font-medium flex items-center">
+                      <FaClipboardList className="mr-1" />
+                      Reports
+                    </span>
+                  </li>
+                </ol>
+              </nav>
             </div>
           </div>
         </div>
@@ -161,12 +223,16 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {stat.title}
+                  </p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
                     {stat.value}
                   </p>
                 </div>
-                <div className={`text-${stat.color}-500 bg-${stat.color}-50 p-3 rounded-lg`}>
+                <div
+                  className={`text-${stat.color}-500 bg-${stat.color}-50 p-3 rounded-lg`}
+                >
                   <stat.icon className="h-6 w-6" />
                 </div>
               </div>
@@ -179,7 +245,9 @@ export default function Dashboard() {
           {/* Time Series Chart */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Report Trends</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Report Trends
+              </h2>
               <select
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
                 value={timeframe}
@@ -210,7 +278,9 @@ export default function Dashboard() {
 
           {/* Distribution Chart */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Report Distribution</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">
+              Report Distribution
+            </h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -227,7 +297,10 @@ export default function Dashboard() {
                     dataKey="value"
                   >
                     {Object.entries(typeStats).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -254,7 +327,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Reports</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Recent Reports
+              </h2>
               <div className="relative">
                 <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
