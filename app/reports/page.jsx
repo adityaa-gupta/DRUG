@@ -28,6 +28,7 @@ export default function Reports() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
+  const [activeCategory, setActiveCategory] = useState("all"); // New state for category tabs
 
   useEffect(() => {
     const q = query(collection(db, "reports"), orderBy("timestamp", "desc"));
@@ -42,6 +43,32 @@ export default function Reports() {
 
     return () => unsubscribe();
   }, []);
+
+  // Function to get category counts
+  const getCategoryCounts = () => {
+    const pending = reports.filter(
+      (report) => report.status === "pending"
+    ).length;
+    const active = reports.filter(
+      (report) => report.status === "investigating"
+    ).length;
+    const completed = reports.filter((report) =>
+      ["resolved", "dismissed"].includes(report.status)
+    ).length;
+    return { pending, active, completed, all: reports.length };
+  };
+
+  const counts = getCategoryCounts();
+
+  // Function to check if a report belongs to the current active category
+  const belongsToActiveCategory = (report) => {
+    if (activeCategory === "all") return true;
+    if (activeCategory === "pending") return report.status === "pending";
+    if (activeCategory === "active") return report.status === "investigating";
+    if (activeCategory === "completed")
+      return ["resolved", "dismissed"].includes(report.status);
+    return true;
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -87,7 +114,9 @@ export default function Reports() {
       const matchesType =
         filterType === "all" || report.reportType === filterType;
 
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesCategory = belongsToActiveCategory(report);
+
+      return matchesSearch && matchesStatus && matchesType && matchesCategory;
     })
     .sort((a, b) => {
       if (sortOrder === "newest") {
@@ -128,7 +157,68 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Breadcrumb Navigation */}
+      {/* Category Tabs Navigation */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex overflow-x-auto space-x-1 sm:space-x-4">
+            <button
+              onClick={() => setActiveCategory("all")}
+              className={`px-4 py-4 text-sm sm:text-base font-medium whitespace-nowrap border-b-2 transition-colors flex items-center ${
+                activeCategory === "all"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              All Reports
+              <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                {counts.all}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveCategory("pending")}
+              className={`px-4 py-4 text-sm sm:text-base font-medium whitespace-nowrap border-b-2 transition-colors flex items-center ${
+                activeCategory === "pending"
+                  ? "border-yellow-500 text-yellow-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <FaHourglassHalf className="mr-2" />
+              Pending
+              <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs">
+                {counts.pending}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveCategory("active")}
+              className={`px-4 py-4 text-sm sm:text-base font-medium whitespace-nowrap border-b-2 transition-colors flex items-center ${
+                activeCategory === "active"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <FaEye className="mr-2" />
+              Active
+              <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+                {counts.active}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveCategory("completed")}
+              className={`px-4 py-4 text-sm sm:text-base font-medium whitespace-nowrap border-b-2 transition-colors flex items-center ${
+                activeCategory === "completed"
+                  ? "border-green-500 text-green-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <FaCheckCircle className="mr-2" />
+              Completed
+              <span className="ml-2 bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs">
+                {counts.completed}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Filters and Search */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -146,25 +236,25 @@ export default function Reports() {
               />
             </div>
 
-            {/* Status Filter */}
-            <div className="flex items-center justify-between">
-              {/* <FaFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
-              <select
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="investigating">Investigating</option>
-                <option value="resolved">Resolved</option>
-                <option value="dismissed">Dismissed</option>
-              </select>
-            </div>
+            {/* Status Filter - Only show if "All Reports" category is selected */}
+            {activeCategory === "all" && (
+              <div className="flex items-center justify-between">
+                <select
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="investigating">Investigating</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="dismissed">Dismissed</option>
+                </select>
+              </div>
+            )}
 
             {/* Type Filter */}
             <div className="relative">
-              {/* <FaTag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
               <select
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={filterType}
@@ -181,7 +271,6 @@ export default function Reports() {
 
             {/* Sort Order */}
             <div className="relative">
-              {/* <FaClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /> */}
               <select
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={sortOrder}
